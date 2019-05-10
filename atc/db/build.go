@@ -95,7 +95,7 @@ type Build interface {
 	Artifacts() ([]WorkerArtifact, error)
 	Artifact(artifactID int) (WorkerArtifact, error)
 
-	SaveOutput(lager.Logger, string, atc.Source, creds.VersionedResourceTypes, atc.Version, ResourceConfigMetadataFields, string, string) error
+	SaveOutput(string, atc.Source, creds.VersionedResourceTypes, atc.Version, ResourceConfigMetadataFields, string, string) error
 	UseInputs(inputs []BuildInput) error
 
 	Resources() ([]BuildInput, []BuildOutput, error)
@@ -808,7 +808,6 @@ func (b *build) Artifacts() ([]WorkerArtifact, error) {
 }
 
 func (b *build) SaveOutput(
-	logger lager.Logger,
 	resourceType string,
 	source atc.Source,
 	resourceTypes creds.VersionedResourceTypes,
@@ -854,7 +853,7 @@ func (b *build) SaveOutput(
 		return err
 	}
 
-	resourceConfig, err := resourceConfigDescriptor.findOrCreate(logger, tx, b.lockFactory, b.conn)
+	resourceConfig, err := resourceConfigDescriptor.findOrCreate(tx, b.lockFactory, b.conn)
 	if err != nil {
 		return err
 	}
