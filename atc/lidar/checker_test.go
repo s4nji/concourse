@@ -104,7 +104,8 @@ var _ = Describe("Checker", func() {
 			})
 
 			It("errors", func() {
-				Expect(err).To(HaveOccurred())
+				Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+				Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("nope"))
 			})
 		})
 
@@ -119,13 +120,15 @@ var _ = Describe("Checker", func() {
 				})
 
 				It("errors", func() {
-					Expect(err).To(HaveOccurred())
+					Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+					Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("nope"))
 				})
 			})
 
 			Context("when fetching resource types for the resource succeeds", func() {
 				BeforeEach(func() {
 					fakeResource.ResourceTypesReturns([]db.ResourceType{fakeResourceType}, nil)
+					fakeResource.SourceReturns(atc.Source{"param": "((some-secret))"})
 				})
 
 				Context("resolving credential source fails", func() {
@@ -134,7 +137,8 @@ var _ = Describe("Checker", func() {
 					})
 
 					It("errors", func() {
-						Expect(err).To(HaveOccurred())
+						Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+						Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("Finding variable 'some-secret': nope"))
 					})
 				})
 
@@ -144,25 +148,14 @@ var _ = Describe("Checker", func() {
 					})
 
 					It("errors", func() {
-						Expect(err).To(HaveOccurred())
-					})
-				})
-
-				Context("secrets are expired", func() {
-					BeforeEach(func() {
-						past := time.Now().Add(-1 * time.Second)
-						fakeSecrets.GetReturns(nil, &past, true, nil)
-					})
-
-					It("errors", func() {
-						Expect(err).To(HaveOccurred())
+						Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+						Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("Expected to find variables: some-secret"))
 					})
 				})
 
 				Context("resolving credential source succeeds", func() {
 					BeforeEach(func() {
-						future := time.Now().Add(time.Hour)
-						fakeSecrets.GetReturns("some-secret", &future, true, nil)
+						fakeSecrets.GetReturns("some-secret", nil, true, nil)
 					})
 
 					Context("updating the resource config scope fails", func() {
@@ -171,7 +164,8 @@ var _ = Describe("Checker", func() {
 						})
 
 						It("errors", func() {
-							Expect(err).To(HaveOccurred())
+							Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+							Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("nope"))
 						})
 					})
 
@@ -186,8 +180,8 @@ var _ = Describe("Checker", func() {
 								fakeResourceConfigScope.AcquireResourceCheckingLockReturns(nil, false, errors.New("nope"))
 							})
 
-							It("errors", func() {
-								Expect(err).To(HaveOccurred())
+							It("errors but does not finish with error", func() {
+								Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(0))
 							})
 						})
 
@@ -196,8 +190,8 @@ var _ = Describe("Checker", func() {
 								fakeResourceConfigScope.AcquireResourceCheckingLockReturns(nil, false, nil)
 							})
 
-							It("errors", func() {
-								Expect(err).To(HaveOccurred())
+							It("errors but does not finish with error", func() {
+								Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(0))
 							})
 						})
 
@@ -212,7 +206,8 @@ var _ = Describe("Checker", func() {
 								})
 
 								It("errors", func() {
-									Expect(err).To(HaveOccurred())
+									Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+									Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("nope"))
 								})
 							})
 
@@ -227,7 +222,8 @@ var _ = Describe("Checker", func() {
 									})
 
 									It("errors", func() {
-										Expect(err).To(HaveOccurred())
+										Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+										Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("nope"))
 									})
 								})
 
@@ -242,7 +238,8 @@ var _ = Describe("Checker", func() {
 										})
 
 										It("errors", func() {
-											Expect(err).To(HaveOccurred())
+											Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+											Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("parent resource has no version"))
 										})
 									})
 
@@ -257,7 +254,8 @@ var _ = Describe("Checker", func() {
 											})
 
 											It("errors", func() {
-												Expect(err).To(HaveOccurred())
+												Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+												Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("nope"))
 											})
 										})
 
@@ -272,7 +270,8 @@ var _ = Describe("Checker", func() {
 												})
 
 												It("errors", func() {
-													Expect(err).To(HaveOccurred())
+													Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+													Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("nope"))
 												})
 											})
 
@@ -292,7 +291,20 @@ var _ = Describe("Checker", func() {
 														})
 
 														It("errors", func() {
-															Expect(err).To(HaveOccurred())
+															Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+															Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("nope"))
+														})
+													})
+
+													Context("checking times out", func() {
+														BeforeEach(func() {
+															fakeCheckable.CheckReturns(nil, context.DeadlineExceeded)
+															fakeResourceCheck.TimeoutReturns(time.Second)
+														})
+
+														It("errors", func() {
+															Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+															Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("Timed out after 1s while checking for new versions"))
 														})
 													})
 
@@ -307,7 +319,8 @@ var _ = Describe("Checker", func() {
 															})
 
 															It("errors", func() {
-																Expect(err).To(HaveOccurred())
+																Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+																Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("nope"))
 															})
 														})
 
@@ -322,7 +335,8 @@ var _ = Describe("Checker", func() {
 																})
 
 																It("errors", func() {
-																	Expect(err).To(HaveOccurred())
+																	Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(1))
+																	Expect(fakeResourceCheck.FinishWithErrorArgsForCall(0)).To(Equal("nope"))
 																})
 															})
 

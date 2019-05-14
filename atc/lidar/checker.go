@@ -54,6 +54,7 @@ func (c *checker) Run(ctx context.Context) error {
 	waitGroup := new(sync.WaitGroup)
 
 	for _, resourceCheck := range resourceChecks {
+		waitGroup.Add(1)
 		go c.check(ctx, resourceCheck, waitGroup)
 	}
 
@@ -63,7 +64,6 @@ func (c *checker) Run(ctx context.Context) error {
 }
 
 func (c *checker) check(ctx context.Context, resourceCheck db.ResourceCheck, waitGroup *sync.WaitGroup) error {
-	waitGroup.Add(1)
 	defer waitGroup.Done()
 
 	if err := c.tryCheck(ctx, resourceCheck); err != nil {
@@ -72,7 +72,7 @@ func (c *checker) check(ctx context.Context, resourceCheck db.ResourceCheck, wai
 		}
 
 		if err = resourceCheck.FinishWithError(err.Error()); err != nil {
-			c.logger.Error("failed-to-udpate-resource-check-error", err)
+			c.logger.Error("failed-to-update-resource-check-error", err)
 			return err
 		}
 	}
