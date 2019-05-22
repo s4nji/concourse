@@ -206,7 +206,7 @@ var _ = Describe("Worker", func() {
 		})
 	})
 
-	Describe("FindContainerOnWorker/CreateContainer", func() {
+	Describe("FindContainer/CreateContainer", func() {
 		var (
 			containerMetadata ContainerMetadata
 			containerOwner    ContainerOwner
@@ -250,7 +250,7 @@ var _ = Describe("Worker", func() {
 
 		JustBeforeEach(func() {
 			var err error
-			foundCreatingContainer, foundCreatedContainer, err = worker.FindContainerOnWorker(containerOwner)
+			foundCreatingContainer, foundCreatedContainer, err = worker.FindContainer(containerOwner)
 			Expect(err).ToNot(HaveOccurred())
 		})
 

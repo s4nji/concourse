@@ -135,7 +135,6 @@ func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSour
 		s.logger,
 		s.imageFetchingDelegate,
 		s.resourceInstance.ContainerOwner(),
-		s.session.Metadata,
 		s.containerSpec,
 		s.resourceTypes,
 	)

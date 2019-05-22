@@ -317,11 +317,18 @@ func (scanner *resourceScanner) check(
 	}
 
 	owner := db.NewResourceConfigCheckSessionContainerOwner(resourceConfigScope.ResourceConfig(), ContainerExpiries)
-	containerMetadata := db.ContainerMetadata{
-		Type: db.ContainerTypeCheck,
-	}
 
-	chosenWorker, err := scanner.pool.FindOrChooseWorkerForContainer(logger, owner, containerSpec, workerSpec, scanner.strategy)
+	chosenWorker, err := scanner.pool.FindOrChooseWorkerForContainer(
+		context.Background(),
+		logger,
+		owner,
+		containerSpec,
+		db.ContainerMetadata{
+			Type: db.ContainerTypeCheck,
+		},
+		workerSpec,
+		scanner.strategy,
+	)
 	if err != nil {
 		logger.Error("failed-to-choose-a-worker", err)
 		chkErr := resourceConfigScope.SetCheckError(err)
@@ -336,7 +343,6 @@ func (scanner *resourceScanner) check(
 		logger,
 		worker.NoopImageFetchingDelegate{},
 		owner,
-		containerMetadata,
 		containerSpec,
 		resourceTypes,
 	)

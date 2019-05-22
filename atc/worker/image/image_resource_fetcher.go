@@ -242,9 +242,6 @@ func (i *imageResourceFetcher) ensureVersionOfType(
 		logger,
 		worker.NoopImageFetchingDelegate{},
 		db.NewImageCheckContainerOwner(container, i.teamID),
-		db.ContainerMetadata{
-			Type: db.ContainerTypeCheck,
-		},
 		containerSpec,
 		i.customTypes,
 	)
@@ -308,9 +305,6 @@ func (i *imageResourceFetcher) getLatestVersion(
 		logger,
 		i.imageFetchingDelegate,
 		db.NewImageCheckContainerOwner(container, i.teamID),
-		db.ContainerMetadata{
-			Type: db.ContainerTypeCheck,
-		},
 		resourceSpec,
 		i.customTypes,
 	)
