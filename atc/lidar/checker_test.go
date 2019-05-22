@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/concourse/concourse/atc"
+	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/creds/credsfakes"
 	"github.com/concourse/concourse/atc/db"
 	"github.com/concourse/concourse/atc/db/dbfakes"
@@ -28,22 +29,22 @@ var _ = Describe("Checker", func() {
 		err error
 		ctx context.Context
 
-		fakeSecrets             *credsfakes.FakeSecrets
-		fakeResourceFactory     *dbfakes.FakeResourceFactory
-		fakeResourceCheck       *dbfakes.FakeResourceCheck
-		fakeResource            *dbfakes.FakeResource
-		fakeResourceType        *dbfakes.FakeResourceType
-		fakeResourceConfig      *dbfakes.FakeResourceConfig
-		fakeResourceConfigScope *dbfakes.FakeResourceConfigScope
-		fakeLock                *lockfakes.FakeLock
-		fakeParentType          *dbfakes.FakeResourceType
-		parentVersion           atc.Version
-		fakePool                *workerfakes.FakePool
-		fakeWorker              *workerfakes.FakeWorker
-		fakeContainer           *workerfakes.FakeContainer
-		fakeCheckFactory        *resourcefakes.FakeResourceFactory
-		fakeCheckable           *resourcefakes.FakeResource
-		checkVersion            atc.Version
+		fakeSecrets              *credsfakes.FakeSecrets
+		fakeResourceCheckFactory *dbfakes.FakeResourceCheckFactory
+		fakeResourceCheck        *dbfakes.FakeResourceCheck
+		fakeResource             *dbfakes.FakeResource
+		fakeResourceType         *dbfakes.FakeResourceType
+		fakeResourceConfig       *dbfakes.FakeResourceConfig
+		fakeResourceConfigScope  *dbfakes.FakeResourceConfigScope
+		fakeLock                 *lockfakes.FakeLock
+		fakeParentType           *dbfakes.FakeResourceType
+		parentVersion            atc.Version
+		fakePool                 *workerfakes.FakePool
+		fakeWorker               *workerfakes.FakeWorker
+		fakeContainer            *workerfakes.FakeContainer
+		fakeCheckFactory         *resourcefakes.FakeResourceFactory
+		fakeCheckable            *resourcefakes.FakeResource
+		checkVersion             atc.Version
 
 		checker Checker
 	)
@@ -52,7 +53,7 @@ var _ = Describe("Checker", func() {
 		ctx = context.Background()
 
 		fakeSecrets = new(credsfakes.FakeSecrets)
-		fakeResourceFactory = new(dbfakes.FakeResourceFactory)
+		fakeResourceCheckFactory = new(dbfakes.FakeResourceCheckFactory)
 		fakeResourceCheck = new(dbfakes.FakeResourceCheck)
 		fakeResource = new(dbfakes.FakeResource)
 		fakeResourceType = new(dbfakes.FakeResourceType)
@@ -71,7 +72,7 @@ var _ = Describe("Checker", func() {
 		logger := lagertest.NewTestLogger("test")
 		checker = lidar.NewChecker(
 			logger,
-			fakeResourceFactory,
+			fakeResourceCheckFactory,
 			fakeCheckFactory,
 			fakeSecrets,
 			fakePool,
@@ -85,7 +86,7 @@ var _ = Describe("Checker", func() {
 
 	Context("when fetching resource checks fails", func() {
 		BeforeEach(func() {
-			fakeResourceFactory.ResourceChecksReturns(nil, errors.New("nope"))
+			fakeResourceCheckFactory.ResourceChecksReturns(nil, errors.New("nope"))
 		})
 
 		It("errors", func() {
@@ -95,7 +96,7 @@ var _ = Describe("Checker", func() {
 
 	Context("when fetching resource checks succeeds", func() {
 		BeforeEach(func() {
-			fakeResourceFactory.ResourceChecksReturns([]db.ResourceCheck{fakeResourceCheck}, nil)
+			fakeResourceCheckFactory.ResourceChecksReturns([]db.ResourceCheck{fakeResourceCheck}, nil)
 		})
 
 		Context("when fetching resource for the check fails", func() {
@@ -126,8 +127,11 @@ var _ = Describe("Checker", func() {
 			})
 
 			Context("when fetching resource types for the resource succeeds", func() {
+				var resourceTypes db.ResourceTypes
+
 				BeforeEach(func() {
-					fakeResource.ResourceTypesReturns([]db.ResourceType{fakeResourceType}, nil)
+					resourceTypes = []db.ResourceType{fakeResourceType}
+					fakeResource.ResourceTypesReturns(resourceTypes, nil)
 					fakeResource.SourceReturns(atc.Source{"param": "((some-secret))"})
 				})
 
@@ -173,6 +177,14 @@ var _ = Describe("Checker", func() {
 						BeforeEach(func() {
 							fakeResource.SetResourceConfigReturns(fakeResourceConfigScope, nil)
 							fakeResourceConfigScope.ResourceConfigReturns(fakeResourceConfig)
+						})
+
+						It("calls SetResourceConfig with source and versioned resource types", func() {
+							source, versionedResourceTypes := fakeResource.SetResourceConfigArgsForCall(0)
+							Expect(source).To(Equal(atc.Source{"param": "some-secret"}))
+							variables := creds.NewVariables(fakeSecrets, fakeResource.PipelineName(), fakeResource.TeamName())
+							expectedVersionedResourceTypes := creds.NewVersionedResourceTypes(variables, resourceTypes.Deserialize())
+							Expect(versionedResourceTypes).To(Equal(expectedVersionedResourceTypes))
 						})
 
 						Context("acquiring the lock fails", func() {
@@ -311,6 +323,14 @@ var _ = Describe("Checker", func() {
 													Context("checking succeeds", func() {
 														BeforeEach(func() {
 															fakeCheckable.CheckReturns([]atc.Version{checkVersion}, nil)
+															fakeResourceCheck.FromVersionReturns(atc.Version{"ref": "abcdef"})
+														})
+
+														It("check is called with deadline, source, and version", func() {
+															deadline, source, version := fakeCheckable.CheckArgsForCall(0)
+															Expect(deadline).ToNot(BeNil())
+															Expect(source).To(Equal(atc.Source{"param": "some-secret"}))
+															Expect(version).To(Equal(atc.Version{"ref": "abcdef"}))
 														})
 
 														Context("saving versions fails", func() {
@@ -346,7 +366,7 @@ var _ = Describe("Checker", func() {
 																})
 
 																It("succeeds", func() {
-																	Expect(err).NotTo(HaveOccurred())
+																	Expect(fakeResourceCheck.FinishWithErrorCallCount()).To(Equal(0))
 																})
 															})
 														})

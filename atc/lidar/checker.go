@@ -18,16 +18,16 @@ var ErrFailedToAcquireLock = errors.New("failed to acquire lock")
 
 func NewChecker(
 	logger lager.Logger,
-	resourceFactory db.ResourceFactory,
-	checkFactory resource.ResourceFactory,
+	resourceCheckFactory db.ResourceCheckFactory,
+	resourceFactory resource.ResourceFactory,
 	secrets creds.Secrets,
 	pool worker.Pool,
 	externalURL string,
 ) *checker {
 	return &checker{
 		logger,
+		resourceCheckFactory,
 		resourceFactory,
-		checkFactory,
 		secrets,
 		pool,
 		externalURL,
@@ -35,17 +35,17 @@ func NewChecker(
 }
 
 type checker struct {
-	logger          lager.Logger
-	resourceFactory db.ResourceFactory
-	checkFactory    resource.ResourceFactory
-	secrets         creds.Secrets
-	pool            worker.Pool
-	externalURL     string
+	logger               lager.Logger
+	resourceCheckFactory db.ResourceCheckFactory
+	resourceFactory      resource.ResourceFactory
+	secrets              creds.Secrets
+	pool                 worker.Pool
+	externalURL          string
 }
 
 func (c *checker) Run(ctx context.Context) error {
 
-	resourceChecks, err := c.resourceFactory.ResourceChecks()
+	resourceChecks, err := c.resourceCheckFactory.ResourceChecks()
 	if err != nil {
 		c.logger.Error("failed-to-fetch-resource-checks", err)
 		return err
@@ -147,9 +147,9 @@ func (c *checker) tryCheck(ctx context.Context, resourceCheck db.ResourceCheck) 
 		return err
 	}
 
-	container, err := c.createContainer(logger, ctx, resource, resourceConfigScope.ResourceConfig(), versionedResourceTypes)
+	checkable, err := c.createCheckable(logger, ctx, resource, resourceConfigScope.ResourceConfig(), versionedResourceTypes)
 	if err != nil {
-		logger.Error("failed-to-create-resource-container", err)
+		logger.Error("failed-to-create-resource-checkable", err)
 		return err
 	}
 
@@ -158,7 +158,6 @@ func (c *checker) tryCheck(ctx context.Context, resourceCheck db.ResourceCheck) 
 
 	logger.Debug("checking", lager.Data{"from": resourceCheck.FromVersion()})
 
-	checkable := c.checkFactory.NewResourceForContainer(container)
 	versions, err := checkable.Check(deadline, source, resourceCheck.FromVersion())
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -175,13 +174,13 @@ func (c *checker) tryCheck(ctx context.Context, resourceCheck db.ResourceCheck) 
 	return resourceCheck.Finish()
 }
 
-func (c *checker) createContainer(
+func (c *checker) createCheckable(
 	logger lager.Logger,
 	ctx context.Context,
 	dbResource db.Resource,
 	dbResourceConfig db.ResourceConfig,
-	resourceTypes creds.VersionedResourceTypes,
-) (worker.Container, error) {
+	versionedResourceTypes creds.VersionedResourceTypes,
+) (resource.Resource, error) {
 
 	metadata := resource.TrackerMetadata{
 		ResourceName: dbResource.Name(),
@@ -194,7 +193,7 @@ func (c *checker) createContainer(
 			ResourceType: dbResource.Type(),
 		},
 		BindMounts: []worker.BindMountSource{
-			&worker.CertsVolumeMount{Logger: c.logger},
+			&worker.CertsVolumeMount{Logger: logger},
 		},
 		Tags:   dbResource.Tags(),
 		TeamID: dbResource.TeamID(),
@@ -204,7 +203,7 @@ func (c *checker) createContainer(
 	workerSpec := worker.WorkerSpec{
 		ResourceType:  dbResource.Type(),
 		Tags:          dbResource.Tags(),
-		ResourceTypes: resourceTypes,
+		ResourceTypes: versionedResourceTypes,
 		TeamID:        dbResource.TeamID(),
 	}
 
@@ -232,13 +231,18 @@ func (c *checker) createContainer(
 		return nil, err
 	}
 
-	return chosenWorker.FindOrCreateContainer(
+	container, err := chosenWorker.FindOrCreateContainer(
 		ctx,
 		logger,
 		worker.NoopImageFetchingDelegate{},
 		owner,
 		containerMetadata,
 		containerSpec,
-		resourceTypes,
+		versionedResourceTypes,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.resourceFactory.NewResourceForContainer(container), nil
 }
