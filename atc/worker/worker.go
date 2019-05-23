@@ -189,12 +189,13 @@ func (worker *gardenWorker) FindOrCreateContainer(
 		err               error
 	)
 
+	fmt.Println("heres the owner ", owner)
 	creatingContainer, createdContainer, err = worker.dbWorker.FindContainer(owner)
 	if err != nil {
 		logger.Error("failed-to-find-container-in-db", err)
 		return nil, err
 	}
-
+	fmt.Println("thsee are the handles", creatingContainer, createdContainer)
 	if creatingContainer != nil {
 		containerHandle = creatingContainer.Handle()
 	} else if createdContainer != nil {
@@ -226,7 +227,6 @@ func (worker *gardenWorker) FindOrCreateContainer(
 	}
 
 	if gardenContainer == nil {
-
 		fetchedImage, err := worker.fetchImageForContainer(
 			ctx,
 			logger,

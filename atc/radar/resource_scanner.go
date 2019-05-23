@@ -337,7 +337,7 @@ func (scanner *resourceScanner) check(
 		}
 		return err
 	}
-
+	fmt.Println("heres the owner in scanner", owner)
 	container, err := chosenWorker.FindOrCreateContainer(
 		context.Background(),
 		logger,
