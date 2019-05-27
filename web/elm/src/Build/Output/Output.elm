@@ -353,5 +353,5 @@ viewStepTree timeZone steps state =
         ( StepsComplete, Just root ) ->
             Build.StepTree.StepTree.view timeZone root
 
-        ( _, Nothing ) ->
+        ( _, _ ) ->
             Html.div [] []

@@ -158,28 +158,34 @@ func (r ResourceNotFoundInPipeline) Error() string {
 	return fmt.Sprintf("resource %s not found in pipeline %s", r.Resource, r.Pipeline)
 }
 
-func (b *build) ID() int                      { return b.id }
-func (b *build) Name() string                 { return b.name }
-func (b *build) JobID() int                   { return b.jobID }
-func (b *build) JobName() string              { return b.jobName }
-func (b *build) PipelineID() int              { return b.pipelineID }
-func (b *build) PipelineName() string         { return b.pipelineName }
-func (b *build) TeamID() int                  { return b.teamID }
-func (b *build) TeamName() string             { return b.teamName }
-func (b *build) IsManuallyTriggered() bool    { return b.isManuallyTriggered }
-func (b *build) Schema() string               { return b.schema }
-func (b *build) PrivatePlan() atc.Plan        { return b.privatePlan }
-func (b *build) PublicPlan() *json.RawMessage { return b.publicPlan }
-func (b *build) CreateTime() time.Time        { return b.createTime }
-func (b *build) StartTime() time.Time         { return b.startTime }
-func (b *build) EndTime() time.Time           { return b.endTime }
-func (b *build) ReapTime() time.Time          { return b.reapTime }
-func (b *build) Status() BuildStatus          { return b.status }
-func (b *build) IsScheduled() bool            { return b.scheduled }
-func (b *build) IsDrained() bool              { return b.drained }
-func (b *build) IsRunning() bool              { return !b.completed }
-func (b *build) IsAborted() bool              { return b.aborted }
-func (b *build) IsCompleted() bool            { return b.completed }
+func (b *build) ID() int                   { return b.id }
+func (b *build) Name() string              { return b.name }
+func (b *build) JobID() int                { return b.jobID }
+func (b *build) JobName() string           { return b.jobName }
+func (b *build) PipelineID() int           { return b.pipelineID }
+func (b *build) PipelineName() string      { return b.pipelineName }
+func (b *build) TeamID() int               { return b.teamID }
+func (b *build) TeamName() string          { return b.teamName }
+func (b *build) IsManuallyTriggered() bool { return b.isManuallyTriggered }
+func (b *build) Schema() string            { return b.schema }
+func (b *build) PrivatePlan() atc.Plan     { return b.privatePlan }
+func (b *build) PublicPlan() *json.RawMessage {
+	if string(*b.publicPlan) == "{}" {
+		return nil
+	} else {
+		return b.publicPlan
+	}
+}
+func (b *build) CreateTime() time.Time { return b.createTime }
+func (b *build) StartTime() time.Time  { return b.startTime }
+func (b *build) EndTime() time.Time    { return b.endTime }
+func (b *build) ReapTime() time.Time   { return b.reapTime }
+func (b *build) Status() BuildStatus   { return b.status }
+func (b *build) IsScheduled() bool     { return b.scheduled }
+func (b *build) IsDrained() bool       { return b.drained }
+func (b *build) IsRunning() bool       { return !b.completed }
+func (b *build) IsAborted() bool       { return b.aborted }
+func (b *build) IsCompleted() bool     { return b.completed }
 
 func (b *build) Reload() (bool, error) {
 	row := buildsQuery.Where(sq.Eq{"b.id": b.id}).

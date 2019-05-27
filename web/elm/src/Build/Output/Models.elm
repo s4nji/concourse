@@ -17,3 +17,4 @@ type OutputState
     = StepsLoading
     | StepsLiveUpdating
     | StepsComplete
+    | BuildCancelled

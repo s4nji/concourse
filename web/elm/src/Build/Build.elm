@@ -288,7 +288,10 @@ handleCallback action ( model, effects ) =
                         in
                         updateOutput
                             (\m ->
-                                ( { m | eventStreamUrlPath = Just url }
+                                ( { m
+                                    | eventStreamUrlPath = Just url
+                                    , state = Build.Output.Models.BuildCancelled
+                                  }
                                 , []
                                 , Build.Output.Output.OutNoop
                                 )
