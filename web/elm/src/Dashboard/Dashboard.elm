@@ -688,12 +688,12 @@ pipelinesView { groups, substate, hovered, pipelineRunningKeyframes, query, user
             groups |> Filter.filterGroups query |> List.sortWith Group.ordering
 
         groupViews =
-            if query == "" then
-                [ Landing.view session ]
-
-            else if highDensity then
+            if highDensity then
                 filteredGroups
                     |> List.concatMap (Group.hdView pipelineRunningKeyframes)
+
+            else if query == "" then
+                [ Landing.view session ]
 
             else
                 filteredGroups
