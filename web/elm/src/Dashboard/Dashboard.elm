@@ -267,7 +267,7 @@ handleDeliveryBody delivery ( model, effects ) =
             , effects
             )
 
-        ClockTicked FiveSeconds _ ->
+        ClockTicked OneHour _ ->
             ( model, effects ++ [ FetchData, FetchPipelines ] )
 
         _ ->
@@ -445,7 +445,7 @@ updateBody msg ( model, effects ) =
 subscriptions : List Subscription
 subscriptions =
     [ OnClockTick OneSecond
-    , OnClockTick FiveSeconds
+    , OnClockTick OneHour
     , OnMouse
     , OnKeyDown
     , OnKeyUp
