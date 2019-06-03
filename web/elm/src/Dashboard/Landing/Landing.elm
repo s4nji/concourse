@@ -30,6 +30,7 @@ view model =
         [class "landing"]
         (model.pipelines
             |> RemoteData.withDefault []
+            |> List.sortBy .teamName
             |> List.Extra.gatherEqualsBy .teamName
             |> List.map
                 (\(p, ps) ->
@@ -37,7 +38,7 @@ view model =
                         { hovered = model.hovered
                         , isExpanded = Set.member p.teamName model.expandedTeams
                         , teamName = p.teamName
-                        , pipeline = p
+                        , pipelines = p :: ps
                         }
                 )
         )
@@ -47,15 +48,19 @@ team :
         | hovered : Maybe DomID
         , isExpanded : Bool
         , teamName : String
-        , pipeline : Concourse.Pipeline
+        , pipelines : List (Concourse.Pipeline)
     }
     -> Html Message
-team ({ isExpanded, pipeline } as session) =
+team ({ isExpanded, pipelines } as session) =
     Html.div
         Styles.team
         [ teamHeader session
         , if isExpanded then
-            Html.div Styles.column <| [renderPipeline session pipeline]
+            Html.div Styles.column
+              ( pipelines
+                |> List.sortBy .name
+                |> List.map (renderPipeline session)
+              )
           else
             Html.text ""
         ]
