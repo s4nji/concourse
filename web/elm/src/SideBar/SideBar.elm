@@ -98,6 +98,7 @@ view model currentPipeline =
             (id "side-bar" :: Styles.sideBar)
             (model.pipelines
                 |> RemoteData.withDefault []
+                |> List.sortBy .teamName
                 |> List.Extra.gatherEqualsBy .teamName
                 |> List.map
                     (\( p, ps ) ->
@@ -129,8 +130,11 @@ team ({ isExpanded, pipelines } as session) =
         Styles.team
         [ teamHeader session
         , if isExpanded then
-            Html.div Styles.column <| List.map (pipeline session) pipelines
-
+            Html.div Styles.column
+             ( pipelines
+                |> List.sortBy .name
+                |> List.map (pipeline session)
+              )
           else
             Html.text ""
         ]
