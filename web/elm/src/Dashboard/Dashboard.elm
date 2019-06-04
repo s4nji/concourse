@@ -526,7 +526,7 @@ clusterName model =
         [ Html.text model.clusterName ]
 
 
-dashboardView : Session -> Model -> Html Message
+dashboardView : Session a -> Model -> Html Message
 dashboardView session model =
     case model.state of
         RemoteData.NotAsked ->
@@ -679,7 +679,7 @@ pipelinesView :
     , query : String
     , userState : UserState.UserState
     , highDensity : Bool
-    , session : Session
+    , session : Session a
     }
     -> List (Html Message)
 pipelinesView { groups, substate, hovered, pipelineRunningKeyframes, query, userState, highDensity, session } =
