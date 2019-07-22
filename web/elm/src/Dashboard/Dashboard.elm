@@ -17,6 +17,7 @@ import Dashboard.Filter as Filter
 import Dashboard.Footer as Footer
 import Dashboard.Group as Group
 import Dashboard.Group.Models exposing (Group, Pipeline)
+import Dashboard.Landing.Landing as Landing
 import Dashboard.Models as Models
     exposing
         ( DashboardError(..)
@@ -265,7 +266,7 @@ handleDeliveryBody delivery ( model, effects ) =
             , effects
             )
 
-        ClockTicked FiveSeconds _ ->
+        ClockTicked OneHour _ ->
             ( model, effects ++ [ FetchData, FetchPipelines ] )
 
         _ ->
@@ -443,7 +444,7 @@ updateBody msg ( model, effects ) =
 subscriptions : List Subscription
 subscriptions =
     [ OnClockTick OneSecond
-    , OnClockTick FiveSeconds
+    , OnClockTick OneHour
     , OnMouse
     , OnKeyDown
     , OnKeyUp
@@ -475,7 +476,7 @@ view session model =
                     "50px"
             ]
           <|
-            [ SideBar.view session Nothing
+            [ if model.query == "" then Html.text "" else SideBar.view session Nothing
             , dashboardView session model
             ]
         , Footer.view session model
@@ -488,7 +489,7 @@ topBar session model =
         (id "top-bar-app" :: Views.Styles.topBar False)
     <|
         [ Html.div [ style "display" "flex", style "align-items" "center" ]
-            [ SideBar.hamburgerMenu session
+            [ if model.query == "" then Html.text "" else SideBar.hamburgerMenu session
             , Html.a (href "/" :: Views.Styles.concourseLogo) []
             , clusterNameView session
             ]
@@ -525,7 +526,7 @@ clusterNameView session =
 
 
 dashboardView :
-    { a | hovered : HoverState.HoverState, screenSize : ScreenSize }
+    Session
     -> Model
     -> Html Message
 dashboardView session model =
@@ -555,6 +556,7 @@ dashboardView session model =
                             model.pipelineRunningKeyframes
                         , userState = model.userState
                         , highDensity = model.highDensity
+                        , session = session
                         }
 
 
@@ -672,7 +674,6 @@ turbulenceView path =
             ]
         ]
 
-
 pipelinesView :
     { groups : List Group
     , substate : Models.SubState
@@ -681,9 +682,10 @@ pipelinesView :
     , query : String
     , userState : UserState.UserState
     , highDensity : Bool
+    , session : Session
     }
     -> List (Html Message)
-pipelinesView { groups, substate, hovered, pipelineRunningKeyframes, query, userState, highDensity } =
+pipelinesView { groups, substate, hovered, pipelineRunningKeyframes, query, userState, highDensity, session } =
     let
         filteredGroups =
             groups |> Filter.filterGroups query |> List.sortWith Group.ordering
@@ -692,6 +694,9 @@ pipelinesView { groups, substate, hovered, pipelineRunningKeyframes, query, user
             if highDensity then
                 filteredGroups
                     |> List.concatMap (Group.hdView pipelineRunningKeyframes)
+
+            else if query == "" then
+                [ Landing.view session ]
 
             else
                 filteredGroups

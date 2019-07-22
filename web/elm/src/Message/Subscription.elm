@@ -64,6 +64,7 @@ type Interval
     = OneSecond
     | FiveSeconds
     | OneMinute
+    | OneHour
 
 
 runSubscription : Subscription -> Sub Delivery
@@ -137,3 +138,6 @@ intervalToTime t =
 
         OneMinute ->
             60 * 1000
+
+        OneHour ->
+            60 * 60 * 1000

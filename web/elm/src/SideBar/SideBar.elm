@@ -163,6 +163,7 @@ view model currentPipeline =
             (id "side-bar" :: Styles.sideBar)
             (model.pipelines
                 |> RemoteData.withDefault []
+                |> List.sortBy .teamName
                 |> List.Extra.gatherEqualsBy .teamName
                 |> List.map
                     (\( p, ps ) ->
